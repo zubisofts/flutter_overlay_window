@@ -23,6 +23,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -128,18 +129,22 @@ public class OverlayService extends Service implements View.OnTouchListener {
         flutterView.setFocusableInTouchMode(true);
         flutterView.setBackgroundColor(Color.TRANSPARENT);
         flutterChannel.setMethodCallHandler((call, result) -> {
-            if (call.method.equals("updateFlag")) {
-                String flag = call.argument("flag").toString();
-                updateOverlayFlag(result, flag);
-            } else if (call.method.equals("updateOverlayPosition")) {
-                int x = call.<Integer>argument("x");
-                int y = call.<Integer>argument("y");
-                moveOverlay(x, y, result);
-            } else if (call.method.equals("resizeOverlay")) {
-                int width = call.argument("width");
-                int height = call.argument("height");
-                boolean enableDrag = call.argument("enableDrag");
-                resizeOverlay(width, height, enableDrag, result);
+            switch (call.method) {
+                case "updateFlag":
+                    String flag = call.argument("flag").toString();
+                    updateOverlayFlag(result, flag);
+                    break;
+                case "updateOverlayPosition":
+                    int x = call.<Integer>argument("x");
+                    int y = call.<Integer>argument("y");
+                    moveOverlay(x, y, result);
+                    break;
+                case "resizeOverlay":
+                    int width = call.argument("width");
+                    int height = call.argument("height");
+                    boolean enableDrag = call.argument("enableDrag");
+                    resizeOverlay(width, height, enableDrag, result);
+                    break;
             }
         });
         overlayMessageChannel.setMessageHandler((message, reply) -> {
@@ -147,15 +152,7 @@ public class OverlayService extends Service implements View.OnTouchListener {
         });
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            windowManager.getDefaultDisplay().getSize(szWindow);
-        } else {
-            DisplayMetrics displaymetrics = new DisplayMetrics();
-            windowManager.getDefaultDisplay().getMetrics(displaymetrics);
-            int w = displaymetrics.widthPixels;
-            int h = displaymetrics.heightPixels;
-            szWindow.set(w, h);
-        }
+        windowManager.getDefaultDisplay().getSize(szWindow);
         int dx = startX == OverlayConstants.DEFAULT_XY ? 0 : startX;
         int dy = startY == OverlayConstants.DEFAULT_XY ? -statusBarHeightPx() : startY;
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
@@ -306,8 +303,8 @@ public class OverlayService extends Service implements View.OnTouchListener {
             Log.e("OverlayService", "Flutter engine not found, hence creating new flutter engine");
             FlutterEngineGroup engineGroup = new FlutterEngineGroup(this);
             DartExecutor.DartEntrypoint entryPoint = new DartExecutor.DartEntrypoint(
-                FlutterInjector.instance().flutterLoader().findAppBundlePath(),
-                "overlayMain"
+                    FlutterInjector.instance().flutterLoader().findAppBundlePath(),
+                    "overlayMain"
             );  // "overlayMain" is custom entry point
 
             flutterEngine = engineGroup.createAndRunEngine(this, entryPoint);
